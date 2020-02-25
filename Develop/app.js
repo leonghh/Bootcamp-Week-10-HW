@@ -1,8 +1,12 @@
-var Employees = require("./lib/employees");
-var engineer = require("./lib/engineer");
-var Manager = require("./lib/manager");
-var intern = require("./lib/intern");
-var inquirer = require("inquirer");
+const Employees = require("./lib/employees");
+const Engineer = require("./lib/engineer");
+const Manager = require("./lib/manager");
+const Intern = require("./lib/intern");
+const Generate = require("./lib/generateHTML");
+
+const inquirer = require("inquirer");
+const fs = require('fs');
+const parse = require('node-html-parser').parse;
 
 const verifyManagerQ = {
     type: "confirm",
@@ -27,7 +31,7 @@ const managerQ = [
         name: "managerEmail"
     },
     {
-        type: "number",
+        type: "input",
         message: "Enter manager's office number:",
         name: "managerOfficeNum"
     }
@@ -49,7 +53,7 @@ const engineerQ = [
     {
         type: "input",
         message: "Enter engineer's ID:",
-        name: "engineerName"
+        name: "engineerID"
     },
     {
         type: "input",
@@ -72,7 +76,7 @@ const internQ = [
     {
         type: "input",
         message: "Enter intern's ID:",
-        name: "internName"
+        name: "internID"
     },
     {
         type: "input",
@@ -86,7 +90,9 @@ const internQ = [
     }
 ];
 
-const employeesArr = [];
+const managerArr = [];
+const engineerArr = [];
+const internArr = [];
 
 runApp();
 
@@ -97,79 +103,133 @@ function runApp() {
                 promptManagerQ();
             } else {
                 console.log("This form is to be filled by managers only.")
-            }
+            };
         }).catch(function (error) {
             console.log(error);
-        })
-}
+        });
+};
 
 function promptManagerQ() {
     inquirer.prompt(managerQ)
-        .then((res) => {
-            const managerTitle = "Manager"
-            const managerInfo = new Manager(res.managerName,res.managerID,res.managerEmail,res.managerOfficeNum,managerTitle)
-           
-            const managerName = managerInfo.getName(res.managerName);
-            const managerID = managerInfo.getId(res.managerID);
-            const managerRole = managerInfo.getTitle(managerTitle);
-            const managerEmail = managerInfo.getEmail(res.managerEmail);
-            const managerOfficeNum = managerInfo.getOfficeNum(res.managerOfficeNum);
-           
-            employeesArr.push(managerInfo);
+        .then((res) => {     
+            const managerRole = {managerRole: "Manager"};
+            const managerInfo = Object.assign(res, managerRole)
+            managerArr.push(managerInfo);
             console.log("Manager has been added.");
             promptAddEmployeesQ();
         });
-}
+};
+
+function createManagerCard(data) {
+    const allManagerData = [];
+    data.forEach(data => {
+        const newManager = new Manager(data.managerName,data.managerID,data.managerEmail,data.managerOfficeNum)
+        const managerHtml = Generate.manager(newManager);
+        allManagerData.push(managerHtml);
+
+        fs.readFile('./templates/main.html', 'utf8', (err,html) =>{
+            if(err) {
+                throw err;
+            };
+            var root = parse(html);
+            var body = root.querySelector('#managerContent');
+            allManagerData.forEach(element => body.appendChild(element));
+            fs.writeFileSync("./output/main.html", root.toString(), {flag:'a'}, function (err) {
+                if (err) {
+                    return console.log(err);
+                }
+            });
+        });
+    });
+};
 
 function promptAddEmployeesQ() {
     inquirer.prompt(addEmployeesQ)
         .then((res) => {
             if (res.title === "Finish adding employees") {
-                console.log("You have finished filling your team's information.")
+                createManagerCard(managerArr);
+                createEngineerCard(engineerArr);
+                createInternCard(internArr);
+                console.log("You have finished filling your team's information.");
             } else if (res.title === "Engineer") {
                 promptEngineerQ();
             } else if (res.title === "Intern") {
                 promptInternQ();
-            }
+            };
         });
-}
+};
+
 
 function promptEngineerQ() {
     inquirer.prompt(engineerQ)
         .then((res) => {
-            const engineerTitle = "Engineer";
-            const engineerInfo = new Engineer(res.engineerName,res.engineerID,res.engineerEmail,res.engineerGitHub,engineerTitle);
-            
-            const engineerName = engineerInfo.getName(res.engineerName);
-            const engineerID = engineerInfo.getId(res.engineerID);
-            const engineerRole = engineerInfo.getTitle(engineerTitle);
-            const engineerEmail = engineerInfo.getEmail(res.engineerEmail);
-            const engineerGitHub = engineerInfo.getGitHub(res.engineerOfficeNum);
-            
-            employeesArr.push(engineerInfo);
+            const engineerRole = {engineerRole: "Engineer"};
+            const engineerInfo = Object.assign(res, engineerRole)
+            engineerArr.push(engineerInfo);
             console.log("Engineer has been added.");
             promptAddEmployeesQ();
         });
-}
+};
+
+function createEngineerCard(data) {
+    const allEngineerData = [];
+    data.forEach(data => {
+        const newEngineer = new Engineer(data.engineerName,data.engineerID,data.engineerEmail,data.engineerGitHub);
+        const engineerHtml = Generate.engineer(newEngineer);
+        allEngineerData.push(engineerHtml);
+
+        fs.readFile('./templates/main.html', 'utf8', (err,html) =>{
+            if(err) {
+                throw err;
+            };
+            var root = parse(html);
+            var body = root.querySelector('#engineerContent');
+            allEngineerData.forEach(element => body.appendChild(element));
+            fs.writeFileSync("./output/main.html", root.toString(), {flag:'a'}, function (err) {
+                if (err) {
+                    return console.log(err);
+                }
+            });
+        });
+    });
+};
+
 
 function promptInternQ() {
     inquirer.prompt(internQ)
         .then((res) => {
-            console.log(res);
-            const internTitle = "Intern";
-            const internInfo = new Intern(res.internName,res.internID,res.internEmail,res.internSchool,internTitle);
-            
-            const internName = internInfo.getName(res.internName);
-            const internID = internInfo.getId(res.internID);
-            const internRole = internInfo.getTitle(internTitle);
-            const internEmail = internInfo.getEmail(res.internEmail);
-            const internSchool = internInfo.getSchool(res.internSchool);
-            
-            employeesArr.push(internInfo)
+            const internRole = {internRole: "Intern"};
+            const internInfo = Object.assign(res, internRole)
+            internArr.push(internInfo)
             console.log("Intern has been added.")
             promptAddEmployeesQ();
         });
-}
+};
+
+function createInternCard(data) {
+    const allInternData = [];
+    data.forEach(data => {
+        const newIntern = new Intern(data.internName,data.internID,data.internEmail,data.internSchool)
+        const internHtml = Generate.intern(newIntern);
+        allInternData.push(internHtml);
+
+        fs.readFile('./templates/main.html', 'utf8', (err,html) =>{
+            if(err) {
+                throw err;
+            };
+            const root = parse(html);
+            const body = root.querySelector('#internContent');
+            allInternData.forEach(element => body.appendChild(element));
+            fs.writeFileSync("./output/main.html", root.toString(), {flag:'a'}, function (err) {
+                if (err) {
+                    return console.log(err);
+                }
+            });
+        });
+    });
+};
+
+
 
 
 
