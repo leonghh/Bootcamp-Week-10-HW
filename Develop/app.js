@@ -220,7 +220,7 @@ function createInternCard(data) {
             const root = parse(html);
             const body = root.querySelector('#internContent');
             allInternData.forEach(element => body.appendChild(element));
-            fs.writeFileSync("./output/main.html", root.toString(), {flag:'a'}, function (err) {
+            fs.writeFileSync("./output/main.html", root.toString(), function (err) {
                 if (err) {
                     return console.log(err);
                 }
